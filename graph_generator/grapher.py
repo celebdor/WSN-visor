@@ -43,6 +43,9 @@ class stripParser:
           sent = received = 0
           p = self.options.plot
           e = self.options.percent
+          pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
+          patternSent = re.compile('.*?SENT; (.*?); (.*?)\]')
+          patternReceived = re.compile('.*?RECV; (.*?); (.*?)\]')
           if p:
                time = list()
                if e:
@@ -57,9 +60,6 @@ class stripParser:
                     print 'Time Sent Received'
           
           for l in f:
-               pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
-               patternSent = re.compile('.*?SENT; (.*?); (.*?)\]')
-               patternReceived = re.compile('.*?RECV; (.*?); (.*?)\]')
                s = pattern.search(l)
                if s:
                     s2 = patternSent.search(l)
@@ -124,6 +124,10 @@ class stripParser:
           t = self.timeSet
           delta = 0
           p = self.options.plot
+          pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
+          patternAdd = re.compile('.*?HWY_ADDED; (.*?); (.*?); (.*?); (.*?); (.*?)\]')
+          patternDel = re.compile('.*?HWY_DEL; (.*?); (.*?); (.*?); (.*?)\]')
+          patternClus = re.compile('.*?HWY_CLUS; (.*?); (.*?)\]')
           if p:
                time = list()
                clusList = list()
@@ -134,10 +138,6 @@ class stripParser:
                print 'Time clusters avg_cluster_size highways avg_highways_size'
           
           for l in f:
-               pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
-               patternAdd = re.compile('.*?HWY_ADDED; (.*?); (.*?); (.*?); (.*?); (.*?)\]')
-               patternDel = re.compile('.*?HWY_DEL; (.*?); (.*?); (.*?); (.*?)\]')
-               patternClus = re.compile('.*?HWY_CLUS; (.*?); (.*?)\]')
                s = pattern.search(l)
                if s:
                     s2 = patternAdd.search(l)
