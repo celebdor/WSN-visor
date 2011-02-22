@@ -46,6 +46,7 @@ class stripParser:
           pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
           patternSent = re.compile('.*?SENT; (.*?); (.*?)\]')
           patternReceived = re.compile('.*?RECV; (.*?); (.*?)\]')
+          patternShut = re.compile('.*?(0x.*?)\].*HWY_SHUT\]')
           if p:
                time = list()
                if e:
@@ -64,10 +65,11 @@ class stripParser:
                if s:
                     s2 = patternSent.search(l)
                     s3 = patternReceived.search(l)
+                    s4 = patternShut.search(l)
                     if not t:
                          t = True
                          zero = parse(s.group(2))
-                         if not s2 and not s3:
+                         if not s2 and not s3 and not s4:
                               if p:
                                    time.append(0.0)
                                    if e:
@@ -88,6 +90,9 @@ class stripParser:
                          sent += 1
                     elif s3:
                          received += 1
+                    elif s4:
+                         if p:
+                              plt.axvline(x=delta.seconds+delta.microseconds*1.0/1000000)
                     if p:
                          time.append(delta.seconds+delta.microseconds*1.0/1000000)
                          if e:
@@ -127,7 +132,8 @@ class stripParser:
           pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
           patternAdd = re.compile('.*?HWY_ADDED; (.*?); (.*?); (.*?); (.*?); (.*?)\]')
           patternDel = re.compile('.*?HWY_DEL; (.*?); (.*?); (.*?); (.*?)\]')
-          patternClus = re.compile('.*?HWY_CLUS; (.*?); (.*?)\]')
+          patternClus = re.compile('.*?(0x.*?)\].*?HWY_CLUS; (.*?); (.*?)\]')
+          patternShut = re.compile('.*?(0x.*?)\].*HWY_SHUT\]')
           if p:
                time = list()
                clusList = list()
@@ -143,6 +149,7 @@ class stripParser:
                     s2 = patternAdd.search(l)
                     s3 = patternDel.search(l)
                     s4 = patternClus.search(l)
+                    s5 = patternShut.search(l)
                     if not t:
                          t = True
                          zero = parse(s.group(2))
@@ -172,6 +179,17 @@ class stripParser:
                          nt = parse(s.group(2))
                          delta = nt-zero
                          self.cluster.update(s4.group(1), s4.group(2) )
+                    elif s5:
+                         nt = parse(s.group(2))
+                         delta = nt-zero
+                         self.cluster.remove(s5.group(1))
+                         l = list()
+                         for i in range(len(self.hwys)):
+                              if not self.hwys[i].contains(int(s5.group(1), 0)):
+                                   l.append(self.hwys[i])
+                         self.hwys = l
+                         if p:
+                              plt.axvline(x=delta.seconds+delta.microseconds*1.0/1000000)
                     else:
                          end = parse(s.group(2))
                          delta = end-zero
@@ -210,6 +228,9 @@ class highway:
                self.ps = int(pt, 0)
                self.pt = int(ps, 0)
 
+     def contains(self, a):
+          return a == self.cs or a ==self.ct or a == self.ps or a == self.pt
+
      def __eq__(self, b):
           if (self.ps != 0 and self.pt != 0) and (b.ps != 0 and b.pt != 0):
                return self.ps == b.ps and self.pt == b.pt and self.cs == b.cs and self.ct == b.ct
@@ -223,11 +244,17 @@ class cluster:
      def __init__(self):
           self.d = dict();
 
-     def update(self, id, is_head):
-          self.d[id] = is_head == '1'
+     def update(self, id, sid):
+          self.d[id] = id == sid
+
+     def remove(self, id):
+          del self.d[id]
 
      def avg(self):
-          return 22.0/len(self)
+          if len(self) == 0:
+               return 0
+          else:
+               return len(self.d)/len(self)
 
      def __len__(self):
           r = 0

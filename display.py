@@ -17,13 +17,14 @@ class display:
           self.edgeWidth = {'msg': self.setThin, 'highway': self.setThick, 'cluster': self.setMedium}
           self.colorpick = [self.setAirForceBlue, self.setAlizarin, self.setAmber, self.setAppleGreen, self.setArmyGreen, self.setAsparagus, self.setBanana, self.setBlueViolet, self.setBurgundy, self.setBubblegum, self.setByzantine, self.setCamel, self.setCarrotOrange, self.setInchWorm, self.setOlive]
           self.randColor = dict()
+          self.colorAssign = dict()
           random.seed()
 
-     def surfaceCreate(self, png):
+     def surfaceCreate(self, png, o):
           if png == True:
                self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
           else:
-               self.surface = cairo.SVGSurface(self.options.outfile, self.width, self.height)
+               self.surface = cairo.SVGSurface(o, self.width, self.height)
           self.c = cairo.Context (self.surface)
           self.c.scale(self.width-50, self.height-50) # Normalizing the canvas
           self.drawBg(0, 0, 0)
@@ -97,7 +98,7 @@ class display:
           c.select_font_face('Georgia', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
           c.set_font_size(0.02)
           c.move_to(x+2*rad, y)
-          c.show_text(str(id))
+          c.show_text(hex(id))
           c.stroke()
 
      #Empty circle for leaders (Sepia Color)
@@ -117,21 +118,25 @@ class display:
           c.stroke()
 
      def drawNode(self, n, rad, k, color):
+          if self.options.rand_pos:
+               pos = self.pos[n]
+          else:
+               pos = self.pos[n.id]
           if self.options.bigger_leaders and k:
                rad*=3
-          self.drawCircle[k](self.pos[n][0], self.pos[n][1], rad)
+          self.drawCircle[k](pos[0], pos[1], rad)
           if self.options.random_colors:
                color(self.randColor[n.sid])
           else:
                color()
 
           if self.options.show_id:
-               self.drawNodeId(self.pos[n][0], self.pos[n][1], rad, n.id)
+               self.drawNodeId(pos[0], pos[1], rad, n.id)
 
           #Filling circle
           c = self.c
           c.set_line_width(0.003)
-          c.arc(self.pos[n][0], self.pos[n][1], rad/1.2, 0, 2*pi)
+          c.arc(pos[0], pos[1], rad/1.2, 0, 2*pi)
           c.fill()
 
      def drawBg(self, r, g, b):
@@ -141,19 +146,31 @@ class display:
           c.fill ()
 
      def drawEdge(self, o, t, k):
+          if self.options.rand_pos:
+               pos_a = self.pos[o]
+               pos_b = self.pos[t]
+          else:
+               pos_a = self.pos[o.id]
+               pos_b = self.pos[t.id]
           c = self.c
           self.edgeColor[k]()
           self.edgeWidth[k]()
-          c.move_to(self.pos[o][0], self.pos[o][1])
-          c.line_to(self.pos[t][0], self.pos[t][1])
+          c.move_to(pos_a[0], pos_a[1])
+          c.line_to(pos_b[0], pos_b[1])
           c.stroke()
 
      def drawEdgeLabel(self, o, t, text ):
+          if self.options.rand_pos:
+               pos_a = self.pos[o]
+               pos_b = self.pos[t]
+          else:
+               pos_a = self.pos[o.id]
+               pos_b = self.pos[t.id]
           c = self.c
           self.edgeColor['msg']()
           c.select_font_face('Georgia', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
           c.set_font_size(0.014)
-          c.move_to((self.pos[o][0]+self.pos[t][0])*1.0/2,(self.pos[o][1]+self.pos[t][1])*1.0/2)
+          c.move_to((pos_a[0]+pos_b[0])*1.0/2,(pos_a[1]+pos_b[1])*1.0/2)
           c.show_text(text)
           c.stroke()
 
@@ -167,7 +184,7 @@ class display:
           if self.options.yellow:
                self.edgeColor['h'] = self.setBanana
 
-          self.surfaceCreate(self.options.save_to_png)
+          self.surfaceCreate(self.options.save_to_png, out)
           
           #After this step draw lines between nodes and parent id in a new iteration
           edges = dict()
@@ -179,26 +196,27 @@ class display:
                     edges[k[2]].append(k)
 
           #First we draw the cluster edges
-          for k in edges['cluster']:
-               self.drawEdge(k[0], k[1], k[2])
+          if edges.has_key('cluster'):
+               for k in edges['cluster']:
+                    self.drawEdge(k[0], k[1], k[2])
           
           #Then we draw the highways
-          for k in edges['highway']:
-               self.drawEdge(k[0], k[1], k[2])
+          if edges.has_key('highway'):
+               for k in edges['highway']:
+                    self.drawEdge(k[0], k[1], k[2])
                
           #Finally we draw the message edges
-          for k in edges['msg']:
-               self.drawEdge(k[0], k[1], k[2])
-               if self.options.show_label:
-                    self.drawEdgeLabel(k[0], k[1], g.get_edge_data(*k)['label']) 
+          if edges.has_key('msg'):
+               for k in edges['msg']:
+                    self.drawEdge(k[0], k[1], k[2])
+                    if self.options.show_label:
+                         self.drawEdgeLabel(k[0], k[1], g.get_edge_data(*k)['label']) 
 
           # After drawing the lines we draw the nodes themselves
           # Set initial color in a random way (We are tired of the same colors all the time)
           colors = self.colorpick[:]
           randColors = self.options.random_colors
-          #if randColors:
-               #random.shuffle(colors)
-          colorAssign = dict()
+          colorAssign = self.colorAssign
           for n in g.nodes():
                try:
                     self.drawNode(n, 0.005, n.isLeader(), colorAssign[n.sid] )

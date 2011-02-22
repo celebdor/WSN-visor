@@ -4,7 +4,8 @@ from optparse import OptionParser
 import sys, math, re, random
 import networkx as nx
 from dateutil.parser import *
-import display
+from display import display
+from prop import propParser
 
 class wsnVisor:
      def __init__(self):
@@ -17,6 +18,7 @@ class wsnVisor:
           aparser.add_option('-n', '--random_position', action='store_true', default=False, dest='rand_pos', help='Generates a random positioned graph.')
           aparser.add_option('-r', '--random_colors', action='store_true', default=False, dest='random_colors', help='displays the cluster picking the colors randomly.')
           aparser.add_option('-o', '--output', default='example.png', dest='outfile', help='defines the name of the output picture.')
+          aparser.add_option('-f', '--prop_file', default='luebeck_fronts.prop', dest='prop', help='defines the file with testbed properties.')
           aparser.add_option('-p', '--png', action='store_true', default='false', dest='save_to_png', help='saves the file in png format, if not set in svg.')
           aparser.add_option('-v', '--verbose', action='store_true', default=False, dest='verbose')
           
@@ -26,11 +28,17 @@ class wsnVisor:
                sys.exit(0)
           self.f = open(args[0], 'r')
           self.graph = nx.MultiGraph()
+          self.counter = 0
+          if not self.options.rand_pos:
+               p = propParser()
+               p.parse(self.options.prop)
+               p.normalize()
+               self.pos = p.pos
 
-     def cleanEdges(self, a):
+     def cleanEdges(self, kind):
           g = self.graph
           for e in g.edges(g.nodes(), keys=True):
-              if e[2] == 'msg':
+              if e[2] == kind:
                    g.remove_edge(e[0], e[1], e[2]) 
 
      def clusterEdges(self):
@@ -47,7 +55,7 @@ class wsnVisor:
           patternEdge = re.compile('.*?(0x.*?)\].*?HWY_EDGE; (.*?); (.*?); (.*?); (.*?); (.*?)\]')
           patternDel = re.compile('.*?HWY_DEL; (.*?); (.*?); (.*?); (.*?)\]')
           patternClus = re.compile('.*?(0x.*?)\].*?HWY_CLUS; (.*?); (.*?)\]')
-          patternMsg = re.compile('.*?HWY_MSG; (.*?); (.*?); (.*?)\]' )
+          patternMsg = re.compile('.*?HWY_MSG; (.*?); (.*?); (.*?)(,|\]|;)' )
           patternShut = re.compile('.*?(0x.*?)\].*HWY_SHUT\]')
           p = dict()
           g = self.graph
@@ -56,6 +64,7 @@ class wsnVisor:
           for l in self.f:
                s = pattern.search(l)
                if s:
+                    self.cleanEdges('msg')
                     if not t:
                          t = True
                          zero = parse(s.group(2))
@@ -69,27 +78,35 @@ class wsnVisor:
                          sS = patternShut.search(l)
                          if sC:
                               n = wsnNode(int(sC.group(1), 0), int(sC.group(2), 0), int(sC.group(3), 0) )
+                              at = 'sC'+str(n)
                               # Add or update the node accordingly (networkx managed)
-                              g.add_node(n)
+                              if g.has_node(n):
+                                   g.remove_node(n)
+                                   g.add_node(n)
+                              else:
+                                   g.add_node(n)
                               self.clusterEdges()
 
                          elif sD: #Iterate through the edges and remove those with the highway in the dictionary
-                              ps = sE.group(1)
-                              pt = sE.group(2)
-                              ss = sE.group(3)
-                              ts = se.group(4)
+                              at = 'sD'
+                              ps = sD.group(1)
+                              pt = sD.group(2)
+                              ss = sD.group(3)
+                              ts = sD.group(4)
                               for e in g.edges(g.nodes(), keys=True):
                                   if e[2] == 'highway':
-                                       eD = g.get_edge_data(e)
+                                       eD = g.get_edge_data(*e)
                                        if (ps == eD['ps'] and pt == eD['pt'] and ss == eD['ss'] and ts == eD['ts']) or (pt == eD['ps'] and ps == eD['pt'] and ts == eD['ss'] and ss == eD['ts']):
                                             g.remove_edge(*e) 
 
                          elif sE: #Add the edge between the two elements with the highway four parts in the dictionary
+                              at = 'sE'
                               o = wsnNode( int(sE.group(1), 0), 0, 0)
                               t = wsnNode( int(sE.group(2), 0), 0, 0)
-                              g.add_edge(o, t, key = 'highway', ps = sE.group(3), pt = sE.group(4), ss = sE.group(5), ts = se.group(6))
+                              g.add_edge(o, t, key = 'highway', ps = sE.group(3), pt = sE.group(4), ss = sE.group(5), ts = sE.group(6))
 
                          elif sM:
+                              at = 'sM'
                               # Message displaying
                               mId = sM.group(1)
                               o = wsnNode( int(sM.group(3), 0 ), 0, 0 )
@@ -97,7 +114,7 @@ class wsnVisor:
                               if  mId == 'CAND':
                                    g.add_edge( o, t, key = 'msg', label = mId  )
                               if  mId == 'REQ':
-                                   G.add_edge( o, t, key = 'msg', label = mId  )
+                                   g.add_edge( o, t, key = 'msg', label = mId  )
                               if  mId == 'PACK':
                                    g.add_edge( o, t, key = 'msg', label = mId  )
                               if  mId == 'PNACK':
@@ -106,10 +123,27 @@ class wsnVisor:
                                    g.add_edge( o, t, key = 'msg', label = mId  )
                               if  mId == 'ACK':
                                    g.add_edge( o, t, key = 'msg', label = mId  )
+                         elif sS:
+                              at = 'sS'
+                              o = wsnNode(int(sS.group(1), 0, 0))
+                              g.remove_node(o)
 
-                         self.cleanEdges()
-                         p = nx.spring_layout(g, dim=2, pos=p, fixed=pos.keys())
-                         d.draw(g, pos, self.options.outfile+delta.seconds.__str__()+'_'+delta.microseconds.__str__()[:-3])
+                         if self.options.rand_pos:
+                              if len(p.keys()) == 0:
+                                   p = nx.spring_layout(g)
+                                   print p
+                              else:
+                                   p = nx.spring_layout(g, dim=2, pos=p, fixed=p.keys())
+                         else:
+                              p = self.pos
+
+                         if sC or sE or sM or sS or sD:
+                              if self.options.save_to_png:
+                                   out = self.options.outfile+'_'+str(self.counter)+'_'+str(delta.seconds)+'_'+str(delta.microseconds)[:-3]+at+'.png'
+                              else:
+                                   out = self.options.outfile+'_'+str(self.counter)+'_'+str(delta.seconds)+'_'+str(delta.microseconds)[:-3]+at+'.svg'
+                              self.counter+=1
+                              d.draw(g, p, out)
 
 class wsnNode:
      def __init__(self):
@@ -135,7 +169,7 @@ class wsnNode:
           return cmp(self.id, b.id)
 
      def __str__(self):
-          return hex(self.id)
+          return hex(self.id)+':'+hex(self.sid)+':'+hex(self.parent)
 
 def main():
      v = wsnVisor()
