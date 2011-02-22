@@ -45,15 +45,25 @@ class wsnVisor:
           g = self.graph
           for n in g.node:
                aux = wsnNode( n.parent, n.sid, n.sid)
-               if g.has_node(aux):
+               if not n.isLeader() and g.has_node(aux):
                     t = g.nodes()[g.nodes().index(aux)]
                     g.add_edge(n, t, key = 'cluster') 
+
+     def highwayEdges(self, n, pS, pT, cS, cT):
+          g = self.graph
+          if not n.isLeader():
+               aux = wsnNode( n.parent, n.sid, n.sid)
+               if g.has_node(aux):
+                    p = g.nodes()[g.nodes().index(aux)]
+                    g.add_edge(n, p, key = 'highway', ps = pS, pt = pT, ss = cS, ts = cT)
+                    if p.parent != n.id:
+                         self.highwayEdges(p, pS, pT, cS, cT)
 
      def parseAndDraw(self):
           t = False
           pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
-          patternEdge = re.compile('.*?(0x.*?)\].*?HWY_EDGE; (.*?); (.*?); (.*?); (.*?); (.*?)\]')
           patternDel = re.compile('.*?HWY_DEL; (.*?); (.*?); (.*?); (.*?)\]')
+          patternAdd = re.compile('.*?HWY_ADDED; (.*?); (.*?); (.*?); (.*?);')
           patternClus = re.compile('.*?(0x.*?)\].*?HWY_CLUS; (.*?); (.*?)\]')
           patternMsg = re.compile('.*?HWY_MSG; (.*?); (.*?); (.*?)(,|\]|;)' )
           patternShut = re.compile('.*?(0x.*?)\].*HWY_SHUT\]')
@@ -74,7 +84,7 @@ class wsnVisor:
                          sD = patternDel.search(l)
                          sC = patternClus.search(l)
                          sM = patternMsg.search(l)
-                         sE = patternEdge.search(l)
+                         sA = patternAdd.search(l)
                          sS = patternShut.search(l)
                          if sC:
                               n = wsnNode(int(sC.group(1), 0), int(sC.group(2), 0), int(sC.group(3), 0) )
@@ -99,11 +109,35 @@ class wsnVisor:
                                        if (ps == eD['ps'] and pt == eD['pt'] and ss == eD['ss'] and ts == eD['ts']) or (pt == eD['ps'] and ps == eD['pt'] and ts == eD['ss'] and ss == eD['ts']):
                                             g.remove_edge(*e) 
 
-                         elif sE: #Add the edge between the two elements with the highway four parts in the dictionary
-                              at = 'sE'
-                              o = wsnNode( int(sE.group(1), 0), 0, 0)
-                              t = wsnNode( int(sE.group(2), 0), 0, 0)
-                              g.add_edge(o, t, key = 'highway', ps = sE.group(3), pt = sE.group(4), ss = sE.group(5), ts = sE.group(6))
+                         elif sA: #Go to each of the ports and add the edges till the cluster leader with the highway four parts in the dictionary
+                              at = 'sA'+'_'+sA.group(1)+':'+sA.group(2)+':'+sA.group(3)+':'+sA.group(4)
+                              ps = wsnNode( int(sA.group(1), 0), 0, 0)
+                              recalc = False
+                              if g.has_node(ps):
+                                   pS = g.nodes()[g.nodes().index(ps)]
+                              pt = wsnNode( int(sA.group(2), 0), 0, 0)
+                              if g.has_node(pt):
+                                   pT = g.nodes()[g.nodes().index(pt)]
+                              ss = wsnNode( int(sA.group(3), 0), 0, 0)
+                              if g.has_node(ps):
+                                   sS = g.nodes()[g.nodes().index(ss)]
+                              st = wsnNode( int(sA.group(4), 0), 0, 0)
+                              if g.has_node(pt):
+                                   sT = g.nodes()[g.nodes().index(st)]
+                              if not sS.isLeader():
+                                   sS.sid = sS.id
+                                   sS.parent = sS.id
+                                   self.clusterEdges()
+                                   recalc = True
+                              if not sT.isLeader():
+                                   sT.sid = sT.id
+                                   sT.parent = sT.id
+                                   recalc = True
+                              if recalc:
+                                   self.clusterEdges()
+                              self.highwayEdges(pS, sA.group(1), sA.group(2), sA.group(3), sA.group(4))
+                              self.highwayEdges(pT, sA.group(1), sA.group(2), sA.group(3), sA.group(4))
+                              g.add_edge(pS, pT, key = 'highway', ps = sA.group(1), pt = sA.group(2), ss = sA.group(3), ts = sA.group(4))
 
                          elif sM:
                               at = 'sM'
@@ -137,7 +171,7 @@ class wsnVisor:
                          else:
                               p = self.pos
 
-                         if sC or sE or sM or sS or sD:
+                         if sC or sA or sM or sS or sD:
                               if self.options.save_to_png:
                                    out = self.options.outfile+'_'+str(self.counter)+'_'+str(delta.seconds)+'_'+str(delta.microseconds)[:-3]+at+'.png'
                               else:
