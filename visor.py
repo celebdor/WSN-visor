@@ -61,12 +61,12 @@ class wsnVisor:
 
      def parseAndDraw(self):
           t = False
-          pattern = re.compile('.*?Text \[(.*?)\].*?Time\[(.*?)\]')
-          patternDel = re.compile('.*?HWY_DEL; (.*?); (.*?); (.*?); (.*?)\]')
-          patternAdd = re.compile('.*?HWY_ADDED; (.*?); (.*?); (.*?); (.*?);')
-          patternClus = re.compile('.*?(0x.*?)\].*?HWY_CLUS; (.*?); (.*?)\]')
-          patternMsg = re.compile('.*?HWY_MSG; (.*?); (.*?); (.*?)(,|\]|;)' )
-          patternShut = re.compile('.*?(0x.*?)\].*HWY_SHUT\]')
+          pattern = re.compile('.*?:(0x.*?)\].*?Text \[(.*?)\].*?Time\[(.*?)\]')
+          patternDel = re.compile('HWY_DEL; (.*?); (.*?); (.*?); (.*)')
+          patternAdd = re.compile('HWY_ADDED; (.*?); (.*?); (.*?); (.*?)(;|$)')
+          patternClus = re.compile('HWY_CLUS; (.*?); (.*)')
+          patternMsg = re.compile('HWY_MSG; (.*?); (.*?); (.*?)(,|;|$)' )
+          patternShut = re.compile('HWY_SHUT')
           p = dict()
           g = self.graph
           d = display()
@@ -74,20 +74,22 @@ class wsnVisor:
           for l in self.f:
                s = pattern.search(l)
                if s:
+                    if s.group(1) == 0x2e1:
+                         print l
                     self.cleanEdges('msg')
                     if not t:
                          t = True
-                         zero = parse(s.group(2))
+                         zero = parse(s.group(3))
                     else:
-                         nt = parse(s.group(2))
+                         nt = parse(s.group(3))
                          delta = nt-zero
-                         sD = patternDel.search(l)
-                         sC = patternClus.search(l)
-                         sM = patternMsg.search(l)
-                         sA = patternAdd.search(l)
-                         sS = patternShut.search(l)
+                         sD = patternDel.search(s.group(2))
+                         sC = patternClus.search(s.group(2))
+                         sM = patternMsg.search(s.group(2))
+                         sA = patternAdd.search(s.group(2))
+                         sS = patternShut.search(s.group(2))
                          if sC:
-                              n = wsnNode(int(sC.group(1), 0), int(sC.group(2), 0), int(sC.group(3), 0) )
+                              n = wsnNode(int(s.group(1), 0), int(sC.group(1), 0), int(sC.group(2), 0) )
                               at = 'sC'+str(n)
                               # Add or update the node accordingly (networkx managed)
                               if g.has_node(n):
@@ -159,13 +161,12 @@ class wsnVisor:
                                    g.add_edge( o, t, key = 'msg', label = mId  )
                          elif sS:
                               at = 'sS'
-                              o = wsnNode(int(sS.group(1), 0, 0))
+                              o = wsnNode(int(s.group(1), 0, 0))
                               g.remove_node(o)
 
                          if self.options.rand_pos:
                               if len(p.keys()) == 0:
                                    p = nx.spring_layout(g)
-                                   print p
                               else:
                                    p = nx.spring_layout(g, dim=2, pos=p, fixed=p.keys())
                          else:
