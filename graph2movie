@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ ! -d movies ]; then
+     mkdir movies
+fi
+NUM=`ls movies/${1}* | wc -l`
+CMD="mencoder mf://${1}/*.png -mf type=png:w=800:h=800:fps=10 -ovc lavc -lavcopts vcodec=mpeg4 -oac copy -o movies/${1}_${NUM}.avi"
+echo $CMD
