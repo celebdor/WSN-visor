@@ -117,15 +117,23 @@ class wsnVisor:
                               recalc = False
                               if g.has_node(ps):
                                    pS = g.nodes()[g.nodes().index(ps)]
+                              else:
+                                   continue
                               pt = wsnNode( int(sA.group(2), 0), 0, 0)
                               if g.has_node(pt):
                                    pT = g.nodes()[g.nodes().index(pt)]
+                              else:
+                                   continue
                               ss = wsnNode( int(sA.group(3), 0), 0, 0)
-                              if g.has_node(ps):
+                              if g.has_node(ss):
                                    sS = g.nodes()[g.nodes().index(ss)]
+                              else:
+                                   continue
                               st = wsnNode( int(sA.group(4), 0), 0, 0)
-                              if g.has_node(pt):
+                              if g.has_node(st):
                                    sT = g.nodes()[g.nodes().index(st)]
+                              else:
+                                   continue
                               if not sS.isLeader():
                                    sS.sid = sS.id
                                    sS.parent = sS.id
