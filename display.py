@@ -15,8 +15,7 @@ You should have received a copy of the GNU General Public License
 along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import math, random
-import cairo
+import math, random, cairo, csv
 from colors import *
 
 pi = math.pi
@@ -24,7 +23,7 @@ pi = math.pi
 class display:
     def __init__(self):
         #Default configuration
-        self.conf = {'width': 1024, 'height': 1024, 'big_leaders': True, 'random_pos': True, 'random_colors': True, 'show_id': True, 'show_label': True, 'png': True }
+        self.conf = {'width': 1024, 'height': 1024, 'big_leaders': True, 'random_pos': True, 'random_colors': True, 'show_id': True, 'show_label': True, 'png': True, 'bg_color': (0, 0, 0) }
 
         self.drawCircle = {True: self.leaderCircle, False : self.standardCircle}
         self.edgeColor = {'msg': setBlueViolet, 'highway': setAppleGreen, 'cluster': setWhite}
@@ -32,7 +31,27 @@ class display:
         self.colorpick = [setAirForceBlue, setAlizarin, setAmber, setAppleGreen, setArmyGreen, setAsparagus, setBanana, setBlueViolet, setBurgundy, setBubblegum, setByzantine, setCamel, setCarrotOrange, setInchWorm, setOlive]
         self.randColor = dict()
         self.colorAssign = dict()
+        self.msg = dict()
         random.seed()
+
+    def setMsg(self, msgName, edgeColor, edgeWidth = setMedium, displayLabel = False):
+        self.msg[msgName] = {'edgeColor': edgeColor, 'edgeWidth': edgeWidth, 'displayLabel': displayLabel}
+
+    def setPos(self, posDict):
+        self.pos = dict()
+        if getattr(posDict, 'keys'):
+            self.pos = posDict
+            self.conf['random_pos'] = False
+        else:
+            try:
+                f = open(posDict, 'ro')
+                reader = csv.reader(f, delimiter = ' ')
+                for row in reader:
+                    self.pos[row[0]] = (float(row[1]), float(row[2]))
+                f.close()
+                self.conf['random_pos'] = False
+            except IOError:
+                self.conf['random_pos'] = True
 
     def surfaceCreate(self, png, o):
         if self.conf['png']:
@@ -41,7 +60,7 @@ class display:
             self.surface = cairo.SVGSurface(o, self.conf['width'], self.conf['height'])
         self.c = cairo.Context (self.surface)
         self.c.scale(self.conf['width']-50, self.conf['height']-50) # Normalizing the canvas
-        self.drawBg(0, 0, 0)
+        self.drawBg(*self.conf['bg_color'])
         self.c.translate(0.015, 0.015)
 
     def setThin(self):
@@ -55,6 +74,7 @@ class display:
 
     def setCircleWidth(self):
         self.c.set_line_width(0.006)
+
 
     def drawNodeId(self, x, y, rad, id):
         c = self.c
