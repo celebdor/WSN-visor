@@ -15,8 +15,7 @@ You should have received a copy of the GNU General Public License
 along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from optparse import OptionParser
-import sys, math, re, random
+import math, random
 import cairo
 
 pi = math.pi
@@ -56,7 +55,7 @@ class display:
 
      def setAirForceBlue(self):
           self.c.set_source_rgb(0.36, 0.54, 0.66)
-     
+
      def getRandColor(self, col):
           self.c.set_source_rgb( *col )
 
@@ -195,12 +194,12 @@ class display:
 
      def draw(self, g, pos, out):
           self.pos = pos
-          
+
           if self.options.yellow:
                self.edgeColor['h'] = self.setBanana
 
           self.surfaceCreate(self.options.save_to_png, out)
-          
+
           #After this step draw lines between nodes and parent id in a new iteration
           edges = dict()
           for k in g.edges(keys = True):
@@ -214,18 +213,18 @@ class display:
           if edges.has_key('cluster'):
                for k in edges['cluster']:
                     self.drawEdge(k[0], k[1], k[2])
-          
+
           #Then we draw the highways
           if edges.has_key('highway'):
                for k in edges['highway']:
                     self.drawEdge(k[0], k[1], k[2])
-               
+
           #Finally we draw the message edges
           if edges.has_key('msg'):
                for k in edges['msg']:
                     self.drawEdge(k[0], k[1], k[2])
                     if self.options.show_label:
-                         self.drawEdgeLabel(k[0], k[1], g.get_edge_data(*k)['label']) 
+                         self.drawEdgeLabel(k[0], k[1], g.get_edge_data(*k)['label'])
 
           # After drawing the lines we draw the nodes themselves
           # Set initial color in a random way (We are tired of the same colors all the time)
