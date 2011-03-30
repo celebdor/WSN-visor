@@ -14,55 +14,57 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
 """
+import random
 
-def setAirForceBlue(context):
-    context.set_source_rgb(0.36, 0.54, 0.66)
+def AirForceBlue():
+    return (0.36, 0.54, 0.66)
 
-def setAlizarin(context):
-    context.set_source_rgb(0.89, 0.15, 0.21)
+def Alizarin():
+    return (0.89, 0.15, 0.21)
 
-def setAmber(context):
-    context.set_source_rgb(1.0, 0.75, 0.00)
+def Amber():
+    return (1.0, 0.75, 0.00)
 
-def setAppleGreen(context):
-    context.set_source_rgb(0.55, 0.71, 0.00)
+def AppleGreen():
+    return (0.55, 0.71, 0.00)
 
-def setArmyGreen(context):
-    context.set_source_rgb(0.29, 0.33, 0.13)
+def ArmyGreen():
+    return (0.29, 0.33, 0.13)
 
-def setAsparagus(context):
-    context.set_source_rgb(0.53, 0.66, 0.42)
+def Asparagus():
+    return (0.53, 0.66, 0.42)
 
-def setBanana(context):
-    context.set_source_rgb(1.00, 0.82, 0.16)
+def Banana():
+    return (1.00, 0.82, 0.16)
 
-def setBlueViolet(context):
-    context.set_source_rgb(0.54, 0.17, 0.89)
+def BlueViolet():
+    return (0.54, 0.17, 0.89)
 
-def setBurgundy(context):
-    context.set_source_rgb(0.50, 0.00, 0.13)
+def Burgundy():
+    return (0.50, 0.00, 0.13)
 
-def setBubblegum(context):
-    context.set_source_rgb(0.99, 0.76, 0.80)
+def Bubblegum():
+    return (0.99, 0.76, 0.80)
 
-def setByzantine(context):
-    context.set_source_rgb(0.74, 0.20, 0.64)
+def Byzantine():
+    return (0.74, 0.20, 0.64)
 
-def setCamel(context):
-    context.set_source_rgb(0.76, 0.40, 0.62)
+def Camel():
+    return (0.76, 0.40, 0.62)
 
-def setCarrotOrange(context):
-    context.set_source_rgb(0.93, 0.57, 0.13)
+def CarrotOrange():
+    return (0.93, 0.57, 0.13)
 
-def setInchWorm(context):
-    context.set_source_rgb(0.70, 0.93, 0.36)
+def InchWorm():
+    return (0.70, 0.93, 0.36)
 
-def setOlive(context):
-    context.set_source_rgb(0.50, 0.50, 0.00)
+def Olive():
+    return (0.50, 0.50, 0.00)
 
-def setWhite(context):
-    context.set_source_rgb(1.00, 1.00, 1.00)
+def White():
+    return (1.00, 1.00, 1.00)
 
-def getRandColor(context, col):
-    context.set_source_rgb( *col )
+def randColor():
+    r = random.randint( 0, 0xFFFFFF )
+    return (((r>>16)&0xFF)*1.0/255, ((r>>8)&0xFF)*1.0/255, (r&0xFF)*1.0/255 )
 
