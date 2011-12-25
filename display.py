@@ -17,6 +17,7 @@ along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
 
 import math, random
 import cairo
+from functools import partial
 
 class Display:
     """Rendering class of the WSN-Visor"""
@@ -26,29 +27,38 @@ class Display:
         self.width = 1024
         self.height = 1024
 
-        self.draw_circle = {True: self.leader_circle,
-                           False : self.standard_circle}
-        self.edge_color = {'msg': self.set_blue_violet,
-                          'highway': self.set_apple_green,
-                          'cluster': self.set_white}
-        self.edge_witdth = {'msg': self.set_thin,
-                          'highway': self.set_thick,
-                          'cluster': self.set_medium}
-        self.colorpick = [self.set_airforce_blue,
-                          self.set_alizarin,
-                          self.set_amber,
-                          self.set_apple_green,
-                          self.set_army_green,
-                          self.set_asparagus,
-                          self.set_banana,
-                          self.set_blue_violet,
-                          self.set_burgundy,
-                          self.set_bubblegum,
-                          self.set_byzantine,
-                          self.set_camel,
-                          self.set_carrot_orange,
-                          self.set_inch_worm,
-                          self.set_olive]
+        self.draw_circle = {True: partial(self.drawing_circle,
+                                          0.44, 0.26, 0.08),
+                            False : partial(self.drawing_circle,
+                                          1.00, 1.00, 1.00)}
+        self.edge_color = {'msg': partial(self.set_cairo_color,
+                                          0.54, 0.17, 0.89),
+                           'highway': partial(self.set_cairo_color,
+                                              0.55, 0.71, 0.00),
+                           'cluster': partial(self.set_cairo_color,
+                                              1.00, 1.00, 1.00)}
+        self.edge_witdth = {'msg': partial(self.set_line_width, 0.001),
+                            'highway': partial(self.set_line_width, 0.005),
+                            'cluster': partial(self.set_line_width, 0.0025)}
+        # Colors:
+        # air force blue, alizarin, amber, apple_green, army_green,
+        # asparagus, banana, blue_purple, burgundy, bubblegum, byzantine,
+        # camel, carrot_orange, inch worm, olive
+        self.colorpick = [partial(self.set_cairo_color, 0.36, 0.54, 0.66),
+                          partial(self.set_cairo_color, 0.89, 0.15, 0.21),
+                          partial(self.set_cairo_color, 1.00, 0.75, 0.00),
+                          partial(self.set_cairo_color, 0.55, 0.71, 0.00),
+                          partial(self.set_cairo_color, 0.29, 0.33, 0.13),
+                          partial(self.set_cairo_color, 0.53, 0.66, 0.42),
+                          partial(self.set_cairo_color, 1.00, 0.82, 0.16),
+                          partial(self.set_cairo_color, 0.54, 0.17, 0.89),
+                          partial(self.set_cairo_color, 0.50, 0.00, 0.13),
+                          partial(self.set_cairo_color, 0.99, 0.76, 0.80),
+                          partial(self.set_cairo_color, 0.74, 0.20, 0.64),
+                          partial(self.set_cairo_color, 0.76, 0.40, 0.62),
+                          partial(self.set_cairo_color, 0.93, 0.57, 0.13),
+                          partial(self.set_cairo_color, 0.70, 0.93, 0.36),
+                          partial(self.set_cairo_color, 0.50, 0.50, 0.00)]
         self.pos = None
         self.surface = None
         self.context = None
@@ -71,70 +81,17 @@ class Display:
         self.draw_bg(0, 0, 0)
         self.context.translate(0.015, 0.015)
 
-    def set_thin(self):
-        self.context.set_line_width(0.001)
+    def set_line_width(self, width):
+        """Sets the cairo drawing line width to width"""
+        self.context.set_line_width(width)
 
-    def set_thick(self):
-        self.context.set_line_width(0.005)
-
-    def set_medium(self):
-        self.context.set_line_width(0.0025)
-
-    def set_airforce_blue(self):
-        self.context.set_source_rgb(0.36, 0.54, 0.66)
-
-    def get_rand_color(self, col):
-        self.context.set_source_rgb( *col )
-
-    def set_alizarin(self):
-        self.context.set_source_rgb(0.89, 0.15, 0.21)
-
-    def set_amber(self):
-        self.context.set_source_rgb(1.0, 0.75, 0.00)
-
-    def set_apple_green(self):
-        self.context.set_source_rgb(0.55, 0.71, 0.00)
-
-    def set_army_green(self):
-        self.context.set_source_rgb(0.29, 0.33, 0.13)
-
-    def set_asparagus(self):
-        self.context.set_source_rgb(0.53, 0.66, 0.42)
-
-    def set_banana(self):
-        self.context.set_source_rgb(1.00, 0.82, 0.16)
-
-    def set_blue_violet(self):
-        self.context.set_source_rgb(0.54, 0.17, 0.89)
-
-    def set_burgundy(self):
-        self.context.set_source_rgb(0.50, 0.00, 0.13)
-
-    def set_bubblegum(self):
-        self.context.set_source_rgb(0.99, 0.76, 0.80)
-
-    def set_byzantine(self):
-        self.context.set_source_rgb(0.74, 0.20, 0.64)
-
-    def set_camel(self):
-        self.context.set_source_rgb(0.76, 0.40, 0.62)
-
-    def set_carrot_orange(self):
-        self.context.set_source_rgb(0.93, 0.57, 0.13)
-
-    def set_inch_worm(self):
-        self.context.set_source_rgb(0.70, 0.93, 0.36)
-
-    def set_olive(self):
-        self.context.set_source_rgb(0.50, 0.50, 0.00)
-
-    def set_circle_width(self):
-        self.context.set_line_width(0.006)
-
-    def set_white(self):
-        self.context.set_source_rgb(1.00, 1.00, 1.00)
+    def set_cairo_color(self, red = 1.00, green = 0.82, blue = 0.16):
+        """Sets the cairo drawing color to the rgb value. Defaults to banana
+        yellow"""
+        self.context.set_source_rgb(red, green, blue)
 
     def draw_node_id(self, pos_x, pos_y, rad, identifier):
+        """Draws the node identifier beside the node circle"""
         cont = self.context
         cont.select_font_face('Georgia', cairo.FONT_SLANT_NORMAL,
                            cairo.FONT_WEIGHT_BOLD)
@@ -143,23 +100,16 @@ class Display:
         cont.show_text(hex(identifier))
         cont.stroke()
 
-    #Empty circle for leaders (Sepia Color)
-    def leader_circle(self, pos_x, pos_y, rad):
+    def drawing_circle(self, red, green, blue, pos_x, pos_y, rad):
+        """Draw the node representation as a circle"""
         cont = self.context
-        cont.set_source_rgb(0.44, 0.26, 0.08)
-        self.set_circle_width()
-        cont.arc(pos_x, pos_y, rad/2.0, 0, 2*math.pi)
-        cont.stroke()
-
-    #Empty circle for regular ports (White)
-    def standard_circle(self, pos_x, pos_y, rad):
-        cont = self.context
-        cont.set_source_rgb(1, 1, 1)
-        self.set_circle_width()
+        cont.set_source_rgb(red, green, blue)
+        cont.set_line_width(0.006)
         cont.arc(pos_x, pos_y, rad/2.0, 0, 2*math.pi)
         cont.stroke()
 
     def draw_node(self, node, rad, k, color):
+        """Draws a node in the canvas with the appropriate options"""
         if self.options.rand_pos:
             pos = self.pos[node]
         else:
@@ -168,7 +118,7 @@ class Display:
             rad *= 3
         self.draw_circle[k](pos[0], pos[1], rad)
         if self.options.random_colors:
-            color(self.rand_color[node.sid])
+            color(*self.rand_color[node.sid])
         else:
             color()
 
@@ -182,12 +132,14 @@ class Display:
         cont.fill()
 
     def draw_bg(self, red, green, blue):
+        """Draws the background of the canvas """
         cont = self.context
         cont.set_source_rgb(red, green, blue)
         cont.rectangle (0, 0, self.width, self.height)
         cont.fill ()
 
-    def draw_edge(self, origin, target, k):
+    def draw_edge(self, origin, target, kind):
+        """Draws an edge between the origin and the target nodes"""
         if self.options.rand_pos:
             pos_a = self.pos[origin]
             pos_b = self.pos[target]
@@ -195,13 +147,14 @@ class Display:
             pos_a = self.pos[origin.id]
             pos_b = self.pos[target.id]
         cont = self.context
-        self.edge_color[k]()
-        self.edge_witdth[k]()
+        self.edge_color[kind]()
+        self.edge_witdth[kind]()
         cont.move_to(pos_a[0], pos_a[1])
         cont.line_to(pos_b[0], pos_b[1])
         cont.stroke()
 
-    def draw_edge_label(self, origin, target, text ):
+    def draw_edge_label(self, origin, target, text):
+        """Draws the label of an edge beside said edge"""
         if self.options.rand_pos:
             pos_a = self.pos[origin]
             pos_b = self.pos[target]
@@ -217,15 +170,12 @@ class Display:
         cont.show_text(text)
         cont.stroke()
 
-
-    def set_opts(self, opts):
-        self.options = opts
-
     def draw(self, graph, pos, out):
+        """Main method of the display class that renders the graph"""
         self.pos = pos
 
         if self.options.yellow:
-            self.edge_color['h'] = self.set_banana
+            self.edge_color['highway'] = self.set_cairo_color
 
         self.surface_create(self.options.save_to_png, out)
 
@@ -269,7 +219,7 @@ class Display:
                                color_assign[node.sid])
             except KeyError:
                 if rand_colors:
-                    color_assign[node.sid] = self.get_rand_color
+                    color_assign[node.sid] = self.set_cairo_color
                     rand_num = random.randint( 0, 0xFFFFFF )
                     self.rand_color[node.sid] = ((((rand_num>>16)&0xFF)*1.0/255,
                                               ((rand_num>>8)&0xFF)*1.0/255,
